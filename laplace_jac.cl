@@ -25,18 +25,15 @@ kernel void init_domain(constant params_t *params,
   float y = params->ymin + (params->ymax - params->ymin)*get_global_id(1)/
     get_global_size(1);
 
+  /* Handle boundary conditions and initialize the interior to zero */
   float oval = 0;
-
-  /* Handle boundary conditions */
-  if(get_global_id(0) == 0) {
-    oval = sin(2*y);
-  } else if(get_global_id(0) == get_global_size(0) - 1) {
-    oval = sin(y/2);
-  } else if(get_global_id(1) == get_global_size(1) - 1) {
-    oval = x/PI;
-  }
+  oval = select(oval, sin(2*y), get_global_id(0) == 0);
+  oval = select(oval, sin(y/2), get_global_id(0) == get_global_size(0) - 1);
+  oval = select(oval, x/PI, get_global_id(1) == get_global_size(1) - 1);
 
   output[opos] = oval;
+
+  /* Initialize the difference matrix, this mostly matters for the edges */
   diffs[opos] = 0;
 }
 
