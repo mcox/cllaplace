@@ -16,7 +16,7 @@ kernel void init_domain(constant params_t *params,
                         global float *output,
                         global float *diffs)
 {
-  const float PI = 4*atan(1);
+  const float PI = 4.0f*atan(1.0f);
 
   /* Compute the output position for this work item */
   uint opos = get_global_id(0) + params->global_row_stride*get_global_id(1);
@@ -50,16 +50,16 @@ kernel void jacobi_step(constant params_t *params,
   /* Length of row to read from the global space */
   const uint row_read_len = get_local_size(0) +
     /* Add one if there's a column to the left */
-    isgreater(get_group_id(0), 0) +
+    (get_group_id(0) > 0) +
     /* Add one if there's a column to the right */
-    isless(get_group_id(0), get_num_groups(0) - 1);
+    (get_group_id(0) < get_num_groups(0) - 1);
 
   /* Number of rows to read */
   const uint row_read_count = get_local_size(1) +
     /* Add one if there's a row beneath us */
-    isgreater(get_group_id(1), 0) +
+    (get_group_id(1) > 0) +
     /* Add one if there's a row above us */
-    isless(get_group_id(1), get_num_groups(1) - 1);
+    (get_group_id(1) < get_num_groups(1) - 1);
 
   /* Position the read window. First compute the position of this work group's
    * lower left corner in the global array
@@ -70,13 +70,13 @@ kernel void jacobi_step(constant params_t *params,
    */
   global float *global_pos = state + wgpos -
     /* Move one unit back if there's a column to the left we need to read */
-    isgreater(get_group_id(0), 0) -
+    (get_group_id(0) > 0) -
     /* And move down a row if we need to include that one */
-    isgreater(get_group_id(1), 0)*params->global_row_stride;
+    (get_group_id(1) > 0)*params->global_row_stride;
 
   /* Location to start reading into the tile */
-  local float *local_pos = ltile + isequal(get_group_id(0), 0) +
-    isequal(get_group_id(1), 0)*lt_row_stride;
+  local float *local_pos = ltile + (get_group_id(0) == 0) +
+    (get_group_id(1) == 0)*lt_row_stride;
 
   /* Collective read of local tile */
   event_t copy_complete = 0;
